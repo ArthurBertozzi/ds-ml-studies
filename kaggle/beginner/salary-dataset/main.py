@@ -9,7 +9,18 @@ from IPython.display import display
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-from linear_regression import manual_linear_regression, predict
+from linear_regression_manual import (
+    manual_linear_regression,
+    predict,
+    residuals,
+    mse,
+    rmse,
+    mae,
+    r2_score,
+)
+
+from linear_regression_sklearn import SklearnLinearRegression
+
 
 DATA_SET_NAME = "ishank2005/salary-csv"
 
@@ -52,7 +63,26 @@ def create_scatter_with_tendency(axes, df):
     axes[0, 2].set_title("Salary vs Years of Experience with Trend Line")
 
 
-def summarize_plt(rows, columns, x_total, y_total, x_ratio, y_ratio, df):
+def create_residuals_scatter(axes, x, y, b0, b1):
+    res = residuals(x, y, b0, b1)
+
+    axes[1, 2].scatter(x, res)
+    axes[1, 2].axhline(0, color="red", linestyle="--")
+    axes[1, 2].set_title("Residuals vs YearsExperience")
+    axes[1, 2].set_xlabel("YearsExperience")
+    axes[1, 2].set_ylabel("Residual")
+
+
+def create_residuals_histogram(axes, x, y, b0, b1):
+    res = residuals(x, y, b0, b1)
+
+    axes[2, 2].hist(res, bins=15)
+    axes[2, 2].set_title("Residuals Distribution")
+    axes[2, 2].set_xlabel("Residual")
+    axes[2, 2].set_ylabel("Frequency")
+
+
+def summarize_plt(rows, columns, x_total, y_total, x_ratio, y_ratio, df, b0, b1):
     ratios = [x_ratio] + [y_ratio] * (rows - 1)
     fig, axes = plt.subplots(
         rows,
@@ -65,8 +95,13 @@ def summarize_plt(rows, columns, x_total, y_total, x_ratio, y_ratio, df):
     create_heatmap(axes, df)
     create_scatter_with_tendency(axes, df)
     create_histogram(axes, df)
-    fig.delaxes(axes[2, 2])
-    fig.delaxes(axes[1, 2])
+
+    x = df["YearsExperience"]
+    y = df["Salary"]
+
+    create_residuals_scatter(axes, x, y, b0, b1)
+    create_residuals_histogram(axes, x, y, b0, b1)
+
     plt.tight_layout()
     plt.show()
 
@@ -127,7 +162,67 @@ if __name__ == "__main__":
     print_breaker("Predictions")
     print(f"Predicted Salary for 5 years of experience: {predict(5, b0, b1):.2f}")
 
+    # =========================
+    # Model Error Metrics
+    # =========================
+    y_pred = predict(x, b0, b1)
+
+    model_mse = mse(y, y_pred)
+    model_rmse = rmse(y, y_pred)
+    model_mae = mae(y, y_pred)
+    model_r2 = r2_score(y, y_pred)
+
+    print_breaker("Model Error Metrics")
+    print(f"MSE  (Mean Squared Error): {model_mse:,.2f}")
+    print(f"RMSE (Root Mean Squared Error): {model_rmse:,.2f}")
+    print(f"MAE  (Mean Absolute Error): {model_mae:,.2f}")
+    print(f"R²   (Coefficient of Determination): {model_r2:.4f}")
+
+    # =========================
+    # Sklearn Linear Regression
+    # =========================
+    sk_model = SklearnLinearRegression()
+    sk_b0, sk_b1 = sk_model.fit(x, y)
+
+    print_breaker("Sklearn Linear Regression Coefficients")
+    print(f"Intercept (b0): {sk_b0}")
+    print(f"Slope     (b1): {sk_b1}")
+
+    print_breaker("Sklearn Prediction")
+    print(f"Predicted Salary (5 years): {sk_model.predict([5])[0]:.2f}")
+
+    # =========================
+    # Compare Metrics
+    # =========================
+    y_pred_manual = predict(x, b0, b1)
+    y_pred_sklearn = sk_model.predict(x)
+
+    print_breaker("Model Comparison")
+
+    print("Manual Model:")
+    print(f"  RMSE: {rmse(y, y_pred_manual):,.2f}")
+    print(f"  MAE : {mae(y, y_pred_manual):,.2f}")
+    print(f"  R²  : {r2_score(y, y_pred_manual):.4f}")
+
+    print("\nSklearn Model:")
+    print(f"  RMSE: {rmse(y, y_pred_sklearn):,.2f}")
+    print(f"  MAE : {mae(y, y_pred_sklearn):,.2f}")
+    print(f"  R²  : {r2_score(y, y_pred_sklearn):.4f}")
+
     # Data visualization
     summarize_plt(
-        rows=3, columns=3, x_total=14, y_total=12, x_ratio=1, y_ratio=1, df=df
+        rows=3,
+        columns=3,
+        x_total=14,
+        y_total=12,
+        x_ratio=1,
+        y_ratio=1,
+        df=df,
+        b0=b0,
+        b1=b1,
     )
+
+    """
+    Proximos passos
+    Checar com modelo sklearn e comparar
+    """
